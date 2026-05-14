@@ -1,0 +1,40 @@
+# ──────────────────────────────────────────────────────────────
+# docker-compose.override.yml
+# ──────────────────────────────────────────────────────────────
+# Поместите этот файл в корень бэкенд-репо (Samosir_tbank/)
+# рядом с основным docker-compose.yml.
+#
+# Docker Compose автоматически мёрджит override-файл с основным.
+# Он добавляет фронтенд-сервис и обновляет nginx.
+#
+# Использование:
+#   git clone https://github.com/lenchikponchik/Samosir_tbank.git
+#   git clone https://github.com/lenchikponchik/samosir_tbank_front.git
+#   cp samosir_tbank_front/deploy/docker-compose.override.yml Samosir_tbank/
+#   cp samosir_tbank_front/deploy/nginx.frontend.conf Samosir_tbank/nginx/nginx.conf
+#   cd Samosir_tbank
+#   docker-compose up --build
+# ──────────────────────────────────────────────────────────────
+
+services:
+  frontend:
+    build:
+      context: ../samosir_tbank_front
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=/api/v1
+    depends_on:
+      - backend
+    networks:
+      - zarabotok-net
+
+  # Override nginx to add frontend proxying
+  nginx:
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - ml_service
+      - frontend
