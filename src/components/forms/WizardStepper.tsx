@@ -23,7 +23,7 @@ export default function WizardStepper({
 
         return (
           <div key={label} style={{ display: 'contents' }}>
-            <div className="stepper-step" style={{ flex: 'none' }}>
+            <div className="stepper-step">
               <div
                 className={`stepper-circle ${isActive ? 'active' : ''} ${isCompleted && !hasError ? 'completed' : ''} ${hasError ? 'error' : ''}`}
               >
@@ -31,7 +31,6 @@ export default function WizardStepper({
               </div>
               <span
                 className={`stepper-label ${isActive ? 'active' : ''} ${hasError ? 'error' : ''}`}
-                style={{ whiteSpace: 'nowrap' }}
               >
                 {label}
               </span>

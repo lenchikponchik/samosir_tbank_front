@@ -52,6 +52,14 @@ function formatErrorDetail(error: unknown, fallback: string): string {
   return typeof message === 'string' ? message : fallback;
 }
 
+function proxyErrorMessage(status: number, endpoint: string): string {
+  if (status === 500 && API_BASE.startsWith('/')) {
+    return `Backend недоступен. Запустите FastAPI на http://localhost:8000 и попробуйте снова. Запрос: ${API_BASE}${endpoint}`;
+  }
+
+  return `API error ${status}`;
+}
+
 async function request<T>(
   endpoint: string,
   options?: RequestInit & { timeout?: number }
@@ -74,7 +82,7 @@ async function request<T>(
       const error = await res.json().catch(() => null);
       throw new ApiError(
         res.status,
-        formatErrorDetail(error, `API error ${res.status}`)
+        formatErrorDetail(error, proxyErrorMessage(res.status, endpoint))
       );
     }
 

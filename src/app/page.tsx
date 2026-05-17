@@ -7,7 +7,6 @@ import {
   BarChart3,
   FileText,
   Lightbulb,
-  Sparkles,
   Target,
   TrendingUp,
   Zap,
@@ -93,35 +92,9 @@ export default function LandingPage() {
           className="container-main"
           style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}
         >
-          {/* Badge */}
-          <motion.div
-            custom={0}
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-          >
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 16px',
-                background: 'var(--accent-light)',
-                color: 'var(--accent-primary)',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                marginBottom: 24,
-              }}
-            >
-              <Sparkles size={14} />
-              Powered by ML & AI
-            </span>
-          </motion.div>
-
           {/* Heading */}
           <motion.h1
-            custom={1}
+            custom={0}
             variants={fadeUp}
             initial="hidden"
             animate="visible"
@@ -150,7 +123,7 @@ export default function LandingPage() {
 
           {/* Subtitle */}
           <motion.p
-            custom={2}
+            custom={1}
             variants={fadeUp}
             initial="hidden"
             animate="visible"
@@ -168,7 +141,7 @@ export default function LandingPage() {
 
           {/* CTA */}
           <motion.div
-            custom={3}
+            custom={2}
             variants={fadeUp}
             initial="hidden"
             animate="visible"

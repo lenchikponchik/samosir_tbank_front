@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /** Standalone output for Docker deployment */
   output: "standalone",
+  devIndicators: false,
 
   /**
    * Proxy API requests to the FastAPI backend during development.
@@ -17,6 +18,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: "http://localhost:8000/api/:path*",
+      },
+      {
+        source: "/health",
+        destination: "http://localhost:8000/health",
       },
     ];
   },

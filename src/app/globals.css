@@ -209,6 +209,14 @@ body {
   gap: 20px;
 }
 
+.bento-grid > * {
+  min-width: 0;
+}
+
+.bento-wide {
+  grid-column: span 2;
+}
+
 @media (max-width: 1024px) {
   .bento-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -218,6 +226,10 @@ body {
 @media (max-width: 640px) {
   .bento-grid {
     grid-template-columns: 1fr;
+  }
+
+  .bento-wide {
+    grid-column: auto;
   }
 }
 
@@ -234,8 +246,9 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
+  flex: 0 0 auto;
   position: relative;
+  min-width: 0;
 }
 
 .stepper-circle {
@@ -279,6 +292,7 @@ body {
   font-weight: 500;
   color: var(--text-tertiary);
   transition: color 0.3s;
+  white-space: nowrap;
 }
 
 .stepper-label.active {
@@ -301,6 +315,41 @@ body {
 
 .stepper-line.completed {
   background: var(--success);
+}
+
+@media (max-width: 480px) {
+  .container-main {
+    padding: 0 20px;
+  }
+
+  .stepper {
+    margin-bottom: 28px;
+  }
+
+  .stepper-step {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stepper-circle {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+  }
+
+  .stepper-label {
+    max-width: 58px;
+    white-space: normal;
+    text-align: center;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .stepper-line {
+    align-self: flex-start;
+    margin: 16px 2px 0;
+    min-width: 10px;
+  }
 }
 
 /* ─── Gauge / Salary Visualization ───────────────────────── */

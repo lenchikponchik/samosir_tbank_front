@@ -278,10 +278,9 @@ export default function ResultsPage() {
               variants={fadeIn}
               initial="hidden"
               animate="visible"
-              className="glass-card"
+              className="glass-card bento-wide"
               style={{
                 padding: 28,
-                gridColumn: 'span 2',
               }}
             >
               <div
