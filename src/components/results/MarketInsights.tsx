@@ -1,42 +1,58 @@
 'use client';
 
-import { BarChart3, TrendingUp, Search, Target } from 'lucide-react';
-import type { MarketInsights as MarketInsightsType } from '@/types';
+import { BarChart3, Search, Target, BadgeCheck } from 'lucide-react';
+import type { GptOssSalaryResult } from '@/types';
 
 interface MarketInsightsProps {
-  insights: MarketInsightsType;
+  result: GptOssSalaryResult;
 }
 
-export default function MarketInsights({ insights }: MarketInsightsProps) {
-  const trendLabels: Record<string, { label: string; color: string }> = {
-    growing: { label: 'Растёт', color: 'var(--success)' },
-    declining: { label: 'Снижается', color: 'var(--error)' },
-    stable: { label: 'Стабильный', color: 'var(--text-secondary)' },
-  };
-  const trend = trendLabels[insights.demand_trend] || trendLabels.stable;
+const confidenceLabels: Record<string, string> = {
+  low: 'низкая',
+  medium: 'средняя',
+  high: 'высокая',
+};
+
+export default function MarketInsights({ result }: MarketInsightsProps) {
+  const missingSkills = result.missing_skills.map((item) => item.skill);
+  const matchPercent =
+    result.matched_skills.length + missingSkills.length === 0
+      ? 0
+      : (result.matched_skills.length /
+          (result.matched_skills.length + missingSkills.length)) *
+        100;
 
   const metrics = [
     {
       icon: Search,
-      label: 'Вакансий проанализировано',
-      value: insights.vacancies_analyzed.toLocaleString('ru-RU'),
+      label: 'Вакансий получено',
+      value: result.market_sample.candidate_vacancies_received.toLocaleString('ru-RU'),
+    },
+    {
+      icon: BarChart3,
+      label: 'Использовано в оценке',
+      value: result.market_sample.vacancies_used_for_estimation.toLocaleString('ru-RU'),
     },
     {
       icon: Target,
       label: 'Совпадение навыков',
-      value: `${insights.skill_match_percentage.toFixed(1)}%`,
+      value: `${matchPercent.toFixed(0)}%`,
     },
     {
-      icon: TrendingUp,
-      label: 'Тренд спроса',
-      value: trend.label,
-      color: trend.color,
+      icon: BadgeCheck,
+      label: 'Уверенность',
+      value: confidenceLabels[result.confidence.level] || result.confidence.level,
+      color:
+        result.confidence.level === 'high'
+          ? 'var(--success)'
+          : result.confidence.level === 'medium'
+            ? 'var(--warning)'
+            : 'var(--error)',
     },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Metric cards */}
       <div
         style={{
           display: 'grid',
@@ -44,9 +60,9 @@ export default function MarketInsights({ insights }: MarketInsightsProps) {
           gap: 12,
         }}
       >
-        {metrics.map((m) => (
+        {metrics.map((metric) => (
           <div
-            key={m.label}
+            key={metric.label}
             style={{
               padding: 16,
               borderRadius: 'var(--radius-md)',
@@ -54,7 +70,7 @@ export default function MarketInsights({ insights }: MarketInsightsProps) {
               textAlign: 'center',
             }}
           >
-            <m.icon
+            <metric.icon
               size={20}
               color="var(--accent-primary)"
               style={{ marginBottom: 8 }}
@@ -63,20 +79,35 @@ export default function MarketInsights({ insights }: MarketInsightsProps) {
               style={{
                 fontSize: '1.3rem',
                 fontWeight: 800,
-                color: m.color || 'var(--text-primary)',
+                color: metric.color || 'var(--text-primary)',
               }}
             >
-              {m.value}
+              {metric.value}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
-              {m.label}
+              {metric.label}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Missing skills */}
-      {insights.top_missing_skills.length > 0 && (
+      <div
+        style={{
+          padding: 14,
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-secondary)',
+          fontSize: '0.85rem',
+          lineHeight: 1.5,
+        }}
+      >
+        <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+          {result.segment.segment_key}
+        </div>
+        Версия данных: {result.segment.segment_data_version}. {result.confidence.reason}
+      </div>
+
+      {missingSkills.length > 0 && (
         <div>
           <div
             style={{
@@ -98,7 +129,7 @@ export default function MarketInsights({ insights }: MarketInsightsProps) {
             </span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {insights.top_missing_skills.map((skill) => (
+            {missingSkills.map((skill) => (
               <span
                 key={skill}
                 style={{

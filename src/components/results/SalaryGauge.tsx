@@ -8,27 +8,27 @@ interface SalaryGaugeProps {
 }
 
 function formatSalary(n: number): string {
-  return new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+  return `${new Intl.NumberFormat('ru-RU').format(n)} ₽`;
 }
 
 export default function SalaryGauge({ salary }: SalaryGaugeProps) {
-  const max = salary.p75 * 1.2; // add headroom
-  const p25Width = (salary.p25 / max) * 100;
-  const p50Width = (salary.p50 / max) * 100;
-  const p75Width = (salary.p75 / max) * 100;
+  const maxValue = Math.max(salary.max * 1.15, 1);
+  const minWidth = (salary.min / maxValue) * 100;
+  const medianWidth = (salary.median / maxValue) * 100;
+  const maxWidth = (salary.max / maxValue) * 100;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: '2.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-          {formatSalary(salary.p50)}
+          {formatSalary(salary.median)}
         </span>
-        <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>медиана</span>
+        <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>
+          медиана рынка
+        </span>
       </div>
 
-      {/* Visual bar */}
       <div style={{ position: 'relative', paddingTop: 32 }}>
-        {/* Track */}
         <div
           style={{
             height: 14,
@@ -38,10 +38,9 @@ export default function SalaryGauge({ salary }: SalaryGaugeProps) {
             position: 'relative',
           }}
         >
-          {/* p75 bar */}
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${p75Width}%` }}
+            animate={{ width: `${maxWidth}%` }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
             style={{
               position: 'absolute',
@@ -52,10 +51,9 @@ export default function SalaryGauge({ salary }: SalaryGaugeProps) {
               borderRadius: 'var(--radius-full)',
             }}
           />
-          {/* p50 bar */}
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${p50Width}%` }}
+            animate={{ width: `${medianWidth}%` }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
             style={{
               position: 'absolute',
@@ -66,10 +64,9 @@ export default function SalaryGauge({ salary }: SalaryGaugeProps) {
               borderRadius: 'var(--radius-full)',
             }}
           />
-          {/* p25 bar */}
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${p25Width}%` }}
+            animate={{ width: `${minWidth}%` }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
             style={{
               position: 'absolute',
@@ -82,32 +79,32 @@ export default function SalaryGauge({ salary }: SalaryGaugeProps) {
           />
         </div>
 
-        {/* Labels */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 12,
             marginTop: 12,
             fontSize: '0.8rem',
           }}
         >
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-              {formatSalary(salary.p25)}
+              {formatSalary(salary.min)}
             </div>
-            <div style={{ color: 'var(--text-tertiary)' }}>25-й перцентиль</div>
+            <div style={{ color: 'var(--text-tertiary)' }}>нижняя граница</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>
-              {formatSalary(salary.p50)}
+              {formatSalary(salary.median)}
             </div>
-            <div style={{ color: 'var(--text-tertiary)' }}>Медиана</div>
+            <div style={{ color: 'var(--text-tertiary)' }}>медиана</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-              {formatSalary(salary.p75)}
+              {formatSalary(salary.max)}
             </div>
-            <div style={{ color: 'var(--text-tertiary)' }}>75-й перцентиль</div>
+            <div style={{ color: 'var(--text-tertiary)' }}>верхняя граница</div>
           </div>
         </div>
       </div>

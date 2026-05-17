@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zarabotok Frontend
 
-## Getting Started
+Next.js frontend for the Samosir_tbank backend. The main user flow sends a resume profile to `POST /api/v1/analyze` and renders the GPT-OSS salary analysis contract returned by the backend.
 
-First, run the development server:
+## Backend Contract
+
+The frontend expects the backend from `lenchikponchik/Samosir_tbank`:
+
+- `POST /api/v1/analyze` for salary analysis
+- `POST /api/v1/resumes`, `GET /api/v1/resumes/{id}`, `PATCH /api/v1/resumes/{id}` for resume drafts
+- `GET /health` for availability checks
+
+The old `/api/v1/estimates`, `/api/v1/recommendations`, and `/api/v1/history` calls are not used.
+
+## Local Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+By default, the frontend uses `NEXT_PUBLIC_API_URL=/api/v1`. In development, `next.config.ts` rewrites `/api/*` to `http://localhost:8000/api/*`, so the FastAPI backend should be running on port `8000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+For direct backend calls:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 npm run dev
+```
 
-## Learn More
+## Checks
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```

@@ -1,110 +1,104 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowUp, ArrowDown } from 'lucide-react';
-import type { ShapContribution } from '@/types';
+import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import type { Factor } from '@/types';
 
-interface ShapChartProps {
-  contributions: ShapContribution[];
-  baseValue?: number;
+interface FactorListProps {
+  factors: Factor[];
 }
 
-function formatRub(n: number): string {
-  const sign = n >= 0 ? '+' : '';
-  return sign + new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
-}
+const impactConfig = {
+  positive: {
+    icon: ArrowUp,
+    label: 'усиливает',
+    color: 'var(--success)',
+    background: 'var(--success-light)',
+  },
+  negative: {
+    icon: ArrowDown,
+    label: 'снижает',
+    color: 'var(--error)',
+    background: 'var(--error-light)',
+  },
+  neutral: {
+    icon: Minus,
+    label: 'нейтрально',
+    color: 'var(--text-tertiary)',
+    background: 'var(--bg-tertiary)',
+  },
+} satisfies Record<
+  Factor['impact'],
+  { icon: typeof ArrowUp; label: string; color: string; background: string }
+>;
 
-export default function ShapChart({ contributions, baseValue = 80000 }: ShapChartProps) {
-  const sorted = [...contributions].sort(
-    (a, b) => Math.abs(b.contribution_rub) - Math.abs(a.contribution_rub)
-  );
-
-  const maxAbs = Math.max(...sorted.map((c) => Math.abs(c.contribution_rub)), 1);
+export default function FactorList({ factors }: FactorListProps) {
+  if (factors.length === 0) {
+    return (
+      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+        Модель не вернула отдельные факторы влияния для этого расчета.
+      </p>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Base value */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '8px 0',
-          borderBottom: '1px solid var(--border-light)',
-          marginBottom: 4,
-        }}
-      >
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Базовая оценка</span>
-        <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-          {new Intl.NumberFormat('ru-RU').format(baseValue)} ₽
-        </span>
-      </div>
-
-      {/* Contribution bars */}
-      {sorted.map((c, i) => {
-        const isPositive = c.contribution_rub >= 0;
-        const barWidth = (Math.abs(c.contribution_rub) / maxAbs) * 100;
+      {factors.map((factor, index) => {
+        const config = impactConfig[factor.impact];
+        const Icon = config.icon;
 
         return (
           <motion.div
-            key={c.feature}
-            initial={{ opacity: 0, x: -20 }}
+            key={`${factor.factor}-${index}`}
+            initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.08 }}
+            transition={{ delay: index * 0.08 }}
             style={{
-              display: 'flex',
-              alignItems: 'center',
+              display: 'grid',
+              gridTemplateColumns: '150px 1fr',
               gap: 12,
+              padding: 14,
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-secondary)',
             }}
           >
-            {/* Feature name */}
-            <div
-              style={{
-                width: 140,
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-              title={c.feature}
-            >
-              {c.feature.replace('skills:', '').replace('skill:', '')}
-            </div>
-
-            {/* Bar */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${barWidth}%` }}
-                transition={{ duration: 0.6, delay: i * 0.08 }}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <strong
                 style={{
-                  height: 24,
-                  borderRadius: 6,
-                  minWidth: 4,
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.35,
                 }}
-                className={isPositive ? 'shap-positive' : 'shap-negative'}
-              />
+              >
+                {factor.factor}
+              </strong>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  alignSelf: 'flex-start',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  background: config.background,
+                  color: config.color,
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                }}
+              >
+                <Icon size={13} />
+                {config.label}
+              </span>
             </div>
-
-            {/* Value */}
-            <div
+            <p
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: isPositive ? 'var(--success)' : 'var(--error)',
-                flexShrink: 0,
-                width: 100,
-                justifyContent: 'flex-end',
+                color: 'var(--text-secondary)',
+                fontSize: '0.9rem',
+                lineHeight: 1.55,
               }}
             >
-              {isPositive ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-              {formatRub(c.contribution_rub)}
-            </div>
+              {factor.explanation}
+            </p>
           </motion.div>
         );
       })}

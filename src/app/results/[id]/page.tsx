@@ -6,77 +6,92 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   RefreshCw,
-  Download,
   Sparkles,
   BarChart3,
   MessageSquare,
   Globe,
+  AlertCircle,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import SalaryGauge from '@/components/results/SalaryGauge';
-import ShapChart from '@/components/results/ShapChart';
+import FactorList from '@/components/results/ShapChart';
 import RecommendationCard from '@/components/results/RecommendationCard';
 import MarketInsights from '@/components/results/MarketInsights';
-import type { EstimateResponse } from '@/types';
+import { loadAnalyzeResult } from '@/lib/api';
+import type { GptOssSalaryResult } from '@/types';
 
-/* ─── Mock data for demo / when backend is unavailable ───── */
-const MOCK_DATA: EstimateResponse = {
-  id: 'demo',
-  resume_id: 'demo-resume',
-  salary_range: { p25: 120000, p50: 175000, p75: 240000 },
-  market_insights: {
-    vacancies_analyzed: 1247,
-    skill_match_percentage: 72.5,
-    top_missing_skills: ['Docker', 'Kubernetes', 'CI/CD'],
-    demand_trend: 'growing',
+const MOCK_DATA: GptOssSalaryResult = {
+  request_hash: 'demo',
+  segment: {
+    segment_key: 'backend_developer:python:moscow:middle',
+    segment_data_version: '2026-05-16',
   },
-  shap_contributions: [
-    { feature: 'experience_years', contribution_rub: 45000 },
-    { feature: 'skills:Python', contribution_rub: 25000 },
-    { feature: 'skills:FastAPI', contribution_rub: 18000 },
-    { feature: 'skills:PostgreSQL', contribution_rub: 12000 },
-    { feature: 'location:Москва', contribution_rub: 15000 },
-    { feature: 'skills:Docker (отсутствует)', contribution_rub: -20000 },
-    { feature: 'skills:Kubernetes (отсутствует)', contribution_rub: -15000 },
-    { feature: 'education:bachelor', contribution_rub: 5000 },
+  market_sample: {
+    candidate_vacancies_received: 8,
+    vacancies_used_for_estimation: 5,
+    used_vacancy_ids: ['hh-1', 'hh-2', 'hh-3', 'hh-4', 'hh-5'],
+    excluded_vacancies: [],
+    salary_quantiles: {
+      p25: 180000,
+      p50: 220000,
+      p75: 280000,
+    },
+  },
+  salary_range: {
+    min: 180000,
+    median: 220000,
+    max: 280000,
+    currency: 'RUB',
+  },
+  confidence: {
+    score: 0.82,
+    level: 'high',
+    reason: 'Fresh candidate vacancies.',
+  },
+  matched_skills: ['Python', 'FastAPI', 'PostgreSQL'],
+  missing_skills: [
+    {
+      skill: 'Docker',
+      impact: 'medium',
+      reason: 'Часто встречается в вакансиях сегмента.',
+    },
+  ],
+  factor_analysis: [
+    {
+      factor: 'Опыт',
+      impact: 'positive',
+      explanation: 'Три года коммерческого опыта соответствуют middle-сегменту.',
+    },
+    {
+      factor: 'Навыки',
+      impact: 'positive',
+      explanation: 'Python, FastAPI и PostgreSQL совпадают с требованиями выбранных вакансий.',
+    },
+    {
+      factor: 'Docker',
+      impact: 'negative',
+      explanation: 'Навык часто указан в вакансиях, но отсутствует в профиле.',
+    },
   ],
   recommendations: [
     {
-      id: '1',
       priority: 1,
-      category: 'hard_skill',
-      title: 'Добавьте навык Docker',
-      description:
-        'Docker — один из самых востребованных навыков для backend-разработчиков. 85% вакансий Senior Python Developer требуют его знание. Контейнеризация приложений критически важна для современных CI/CD пайплайнов.',
-      impact: '+20 000 ₽',
-      action:
-        'Добавьте "Docker" в раздел навыков и опишите опыт контейнеризации в блоке опыта работы.',
+      type: 'skill_gap',
+      title: 'Добавьте Docker в стек',
+      resume_change:
+        'Опишите опыт контейнеризации сервисов или добавьте учебный проект с Docker Compose.',
+      expected_salary_effect: 'может повысить уверенность оценки',
     },
     {
-      id: '2',
       priority: 2,
-      category: 'hard_skill',
-      title: 'Изучите Kubernetes',
-      description:
-        'Kubernetes дополняет Docker и значительно повышает ценность специалиста. Компании активно ищут DevOps-навыки у бекенд-разработчиков — это ваш рычаг роста.',
-      impact: '+15 000 ₽',
-      action:
-        'Пройдите курс по K8s (2-3 недели), добавьте навык и опишите опыт работы с кластерами.',
-    },
-    {
-      id: '3',
-      priority: 3,
-      category: 'certification',
-      title: 'Получите сертификат AWS/GCP',
-      description:
-        'Облачные сертификации демонстрируют системное мышление и повышают доверие работодателей. AWS Solutions Architect — наиболее ценный на рынке.',
-      impact: '+10 000 ₽',
-      action:
-        'Подготовьтесь к AWS SAA (4-6 недель) и добавьте сертификат в резюме.',
+      type: 'experience_detail',
+      title: 'Уточните масштаб задач',
+      resume_change:
+        'Добавьте в описание опыта нагрузку, размер команды и зоны ответственности.',
+      expected_salary_effect: 'помогает модели отнести профиль к верхней части вилки',
     },
   ],
-  calculated_at: new Date().toISOString(),
 };
 
 const fadeIn = {
@@ -91,32 +106,41 @@ const fadeIn = {
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
-  const estimateId = params.id as string;
+  const requestHash = params.id as string;
 
-  const [data, setData] = useState<EstimateResponse | null>(null);
+  const [data, setData] = useState<GptOssSalaryResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    async function load() {
-      try {
-        if (estimateId === 'demo') {
-          // Simulate loading delay
-          await new Promise((r) => setTimeout(r, 800));
-          setData(MOCK_DATA);
-        } else {
-          const { getEstimate } = await import('@/lib/api');
-          const result = await getEstimate(estimateId);
-          setData(result);
-        }
-      } catch {
-        // Fallback to mock data if backend is unavailable
+    let active = true;
+
+    queueMicrotask(() => {
+      if (!active) return;
+
+      if (requestHash === 'demo') {
         setData(MOCK_DATA);
-      } finally {
         setLoading(false);
+        return;
       }
-    }
-    load();
-  }, [estimateId]);
+
+      const stored = loadAnalyzeResult(requestHash);
+      if (stored) {
+        setData(stored);
+        setErrorMessage('');
+      } else {
+        setData(null);
+        setErrorMessage(
+          'Результат не найден в текущей сессии. Запустите анализ резюме заново.'
+        );
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [requestHash]);
 
   if (loading) {
     return (
@@ -124,7 +148,6 @@ export default function ResultsPage() {
         <Header />
         <main style={{ flex: 1, padding: '60px 0' }}>
           <div className="container-main" style={{ maxWidth: 960 }}>
-            {/* Skeleton loading */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <div className="skeleton" style={{ height: 32, width: 300 }} />
               <div className="glass-card" style={{ padding: 32 }}>
@@ -136,11 +159,6 @@ export default function ResultsPage() {
                   <div className="skeleton" style={{ height: 20, width: 100 }} />
                 </div>
               </div>
-              <div className="bento-grid">
-                <div className="skeleton" style={{ height: 200 }} />
-                <div className="skeleton" style={{ height: 200 }} />
-                <div className="skeleton" style={{ height: 200 }} />
-              </div>
             </div>
           </div>
         </main>
@@ -149,7 +167,33 @@ export default function ResultsPage() {
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Header />
+        <main style={{ flex: 1, padding: '60px 0' }}>
+          <div className="container-main" style={{ maxWidth: 720 }}>
+            <div className="glass-card" style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <AlertCircle size={28} color="var(--error)" />
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                Не удалось открыть результат
+              </h1>
+              <p style={{ color: 'var(--text-secondary)' }}>{errorMessage}</p>
+              <button
+                className="btn-gradient"
+                style={{ alignSelf: 'flex-start' }}
+                onClick={() => router.push('/resume')}
+              >
+                <RefreshCw size={16} />
+                Запустить анализ
+              </button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -157,7 +201,6 @@ export default function ResultsPage() {
 
       <main style={{ flex: 1, padding: '40px 0 80px' }}>
         <div className="container-main" style={{ maxWidth: 960 }}>
-          {/* Top bar */}
           <motion.div
             custom={0}
             variants={fadeIn}
@@ -189,19 +232,16 @@ export default function ResultsPage() {
               <ArrowLeft size={18} />
               Изменить резюме
             </button>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                className="btn-gradient"
-                style={{ padding: '8px 18px', fontSize: '0.85rem' }}
-                onClick={() => router.push('/resume')}
-              >
-                <RefreshCw size={16} />
-                Пересчитать
-              </button>
-            </div>
+            <button
+              className="btn-gradient"
+              style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+              onClick={() => router.push('/resume')}
+            >
+              <RefreshCw size={16} />
+              Пересчитать
+            </button>
           </motion.div>
 
-          {/* ─── Salary Card (full width) ──────────────── */}
           <motion.div
             custom={1}
             variants={fadeIn}
@@ -226,15 +266,13 @@ export default function ResultsPage() {
                   color: 'var(--text-primary)',
                 }}
               >
-                Ваша зарплатная вилка
+                Зарплатная вилка
               </h2>
             </div>
             <SalaryGauge salary={data.salary_range} />
           </motion.div>
 
-          {/* ─── Bento Grid ────────────────────────────── */}
           <div className="bento-grid">
-            {/* SHAP Analysis */}
             <motion.div
               custom={2}
               variants={fadeIn}
@@ -262,13 +300,12 @@ export default function ResultsPage() {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  Факторы влияния (SHAP)
+                  Факторы оценки
                 </h3>
               </div>
-              <ShapChart contributions={data.shap_contributions} />
+              <FactorList factors={data.factor_analysis} />
             </motion.div>
 
-            {/* Market Insights */}
             <motion.div
               custom={3}
               variants={fadeIn}
@@ -296,11 +333,10 @@ export default function ResultsPage() {
                   Обзор рынка
                 </h3>
               </div>
-              <MarketInsights insights={data.market_insights} />
+              <MarketInsights result={data} />
             </motion.div>
           </div>
 
-          {/* ─── Recommendations ──────────────────────── */}
           {data.recommendations.length > 0 && (
             <motion.div
               custom={4}
@@ -335,8 +371,12 @@ export default function ResultsPage() {
                   gap: 16,
                 }}
               >
-                {data.recommendations.map((rec, i) => (
-                  <RecommendationCard key={rec.id} rec={rec} index={i} />
+                {data.recommendations.map((rec, index) => (
+                  <RecommendationCard
+                    key={`${rec.priority}-${rec.title}`}
+                    rec={rec}
+                    index={index}
+                  />
                 ))}
               </div>
             </motion.div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { ExperienceEntry, WizardFormData } from '@/types';
 import { Plus, Trash2, Clock, Building2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,8 +21,18 @@ const emptyEntry: ExperienceEntry = {
 export default function Experience({ data, onChange, errors }: ExperienceProps) {
   const entries = data.experience_entries;
   const hasExperience = data.experience_years > 0;
+  const [experienceYearsInput, setExperienceYearsInput] = useState(
+    data.experience_years > 0 ? String(data.experience_years) : ''
+  );
 
   const handleYearsChange = (value: string) => {
+    setExperienceYearsInput(value);
+
+    if (value.trim() === '') {
+      onChange({ experience_years: 0, experience_entries: [] });
+      return;
+    }
+
     const years = parseFloat(value);
     const parsed = isNaN(years) ? 0 : Math.max(0, years);
     onChange({ experience_years: parsed });
@@ -44,6 +55,20 @@ export default function Experience({ data, onChange, errors }: ExperienceProps) 
       i === index ? { ...e, [field]: value } : e
     );
     onChange({ experience_entries: updated });
+  };
+
+  const updateDuration = (index: number, value: string) => {
+    if (value.trim() === '') {
+      updateEntry(index, 'duration_months', 0);
+      return;
+    }
+
+    const months = parseInt(value, 10);
+    updateEntry(
+      index,
+      'duration_months',
+      Number.isNaN(months) ? 0 : Math.min(600, Math.max(1, months))
+    );
   };
 
   return (
@@ -70,7 +95,7 @@ export default function Experience({ data, onChange, errors }: ExperienceProps) 
           max={50}
           step={0.5}
           placeholder="0"
-          value={data.experience_years === 0 ? '0' : data.experience_years || ''}
+          value={experienceYearsInput}
           onChange={(e) => handleYearsChange(e.target.value)}
         />
         {errors.experience_years && (
@@ -193,9 +218,7 @@ export default function Experience({ data, onChange, errors }: ExperienceProps) 
                     max={600}
                     placeholder="24"
                     value={entry.duration_months || ''}
-                    onChange={(e) =>
-                      updateEntry(i, 'duration_months', parseInt(e.target.value) || 1)
-                    }
+                    onChange={(e) => updateDuration(i, e.target.value)}
                   />
                 </div>
 

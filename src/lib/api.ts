@@ -1,33 +1,16 @@
-/**
- * HTTP client for FastAPI backend (Samosir_tbank)
- *
- * Connection modes:
- *   1. Direct:  NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1  (needs CORS)
- *   2. Proxied: NEXT_PUBLIC_API_URL=/api/v1                      (Next.js rewrites → no CORS)
- *   3. Docker:  NEXT_PUBLIC_API_URL=/api/v1                      (nginx proxies)
- *
- * Backend repo: https://github.com/lenchikponchik/Samosir_tbank
- */
-
 import type {
-  EstimateRequest,
-  EstimateResponse,
-  EstimateHistoryItem,
-  RecommendationResponse,
+  AnalyzeRequest,
+  AnalyzeResponse,
+  GptOssSalaryResult,
   ResumeCreate,
   ResumeResponse,
   ResumeUpdate,
 } from '@/types';
 
-// ─── Configuration ────────────────────────────────────────────
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-
-/** Default timeout for API requests (ms) */
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 const REQUEST_TIMEOUT = 15_000;
-
-// ─── Generic request helper ──────────────────────────────────
+const ANALYZE_TIMEOUT = 75_000;
+const RESULT_STORAGE_PREFIX = 'zarabotok:analysis:';
 
 export class ApiError extends Error {
   status: number;
@@ -41,31 +24,57 @@ export class ApiError extends Error {
   }
 }
 
+function formatErrorDetail(error: unknown, fallback: string): string {
+  if (!error || typeof error !== 'object') return fallback;
+
+  const detail = (error as { detail?: unknown }).detail;
+  if (typeof detail === 'string') return detail;
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          const message = (item as { msg?: unknown }).msg;
+          const location = (item as { loc?: unknown }).loc;
+          if (typeof message === 'string') {
+            return Array.isArray(location)
+              ? `${location.join('.')}: ${message}`
+              : message;
+          }
+        }
+        return JSON.stringify(item);
+      })
+      .join('; ');
+  }
+
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' ? message : fallback;
+}
+
 async function request<T>(
   endpoint: string,
   options?: RequestInit & { timeout?: number }
 ): Promise<T> {
   const { timeout = REQUEST_TIMEOUT, ...fetchOptions } = options || {};
-
-  // AbortController for timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
+      ...fetchOptions,
       headers: {
         'Content-Type': 'application/json',
-        ...fetchOptions?.headers,
+        ...fetchOptions.headers,
       },
       signal: controller.signal,
-      ...fetchOptions,
     });
 
     if (!res.ok) {
-      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      const error = await res.json().catch(() => null);
       throw new ApiError(
         res.status,
-        error.detail || `API error ${res.status}`
+        formatErrorDetail(error, `API error ${res.status}`)
       );
     }
 
@@ -74,26 +83,21 @@ async function request<T>(
     if (err instanceof ApiError) throw err;
 
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError(408, `Запрос превысил таймаут (${timeout / 1000}с)`);
+      throw new ApiError(
+        408,
+        `Запрос превысил таймаут (${Math.round(timeout / 1000)} c)`
+      );
     }
 
-    // Network error — backend is probably unavailable
     throw new ApiError(
       0,
-      'Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен на ' +
-        API_BASE
+      `Не удалось подключиться к серверу. Проверьте, что backend запущен и доступен по ${API_BASE}`
     );
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
-// ─── Health check ─────────────────────────────────────────────
-
-/**
- * Quick health check — is the backend reachable?
- * Uses a shorter timeout since this is meant for UI status indicators.
- */
 export async function checkHealth(): Promise<boolean> {
   try {
     const baseUrl = API_BASE.replace(/\/api\/v1$/, '');
@@ -105,8 +109,6 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
-
-// ─── Resumes ───────────────────────────────────────────────
 
 export async function createResume(
   data: ResumeCreate
@@ -131,44 +133,46 @@ export async function updateResume(
   });
 }
 
-// ─── Estimates ─────────────────────────────────────────────
-
-export async function createEstimate(
-  data: EstimateRequest
-): Promise<EstimateResponse> {
-  return request('/estimates', {
+export async function analyzeResume(
+  data: AnalyzeRequest
+): Promise<GptOssSalaryResult> {
+  const response = await request<AnalyzeResponse>('/analyze', {
     method: 'POST',
     body: JSON.stringify(data),
-    // Estimation can take a while (ML + LLM)
-    timeout: 30_000,
+    timeout: ANALYZE_TIMEOUT,
   });
+
+  if (response.status !== 'success' || !response.data) {
+    const validation = response.validation_errors?.join('; ');
+    throw new ApiError(
+      200,
+      validation || response.message || response.code || 'Анализ не выполнен'
+    );
+  }
+
+  return response.data;
 }
 
-export async function reEstimate(
-  resumeId: string
-): Promise<EstimateResponse> {
-  return request(`/estimates/resume/${resumeId}`, {
-    method: 'POST',
-    timeout: 30_000,
-  });
+export function saveAnalyzeResult(result: GptOssSalaryResult): void {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(
+    `${RESULT_STORAGE_PREFIX}${result.request_hash}`,
+    JSON.stringify(result)
+  );
 }
 
-export async function getEstimate(id: string): Promise<EstimateResponse> {
-  return request(`/estimates/${id}`);
-}
+export function loadAnalyzeResult(
+  requestHash: string
+): GptOssSalaryResult | null {
+  if (typeof window === 'undefined') return null;
 
-// ─── Recommendations ──────────────────────────────────────
+  const raw = sessionStorage.getItem(`${RESULT_STORAGE_PREFIX}${requestHash}`);
+  if (!raw) return null;
 
-export async function getRecommendations(
-  estimateId: string
-): Promise<RecommendationResponse[]> {
-  return request(`/recommendations/estimate/${estimateId}`);
-}
-
-// ─── History ──────────────────────────────────────────────
-
-export async function getHistory(
-  resumeId: string
-): Promise<EstimateHistoryItem[]> {
-  return request(`/history/resume/${resumeId}`);
+  try {
+    const parsed = JSON.parse(raw) as GptOssSalaryResult;
+    return parsed.request_hash === requestHash ? parsed : null;
+  } catch {
+    return null;
+  }
 }

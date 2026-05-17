@@ -1,26 +1,26 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Star, Zap, BookOpen, Award } from 'lucide-react';
-import type { RecommendationResponse, RecommendationCategory } from '@/types';
+import { Star, Zap, BookOpen, Briefcase, Target } from 'lucide-react';
+import type { AnalyzeRecommendation, RecommendationType } from '@/types';
 
 interface RecommendationCardProps {
-  rec: RecommendationResponse;
+  rec: AnalyzeRecommendation;
   index: number;
 }
 
-const categoryConfig: Record<
-  RecommendationCategory,
+const typeConfig: Record<
+  RecommendationType,
   { icon: typeof Star; color: string; label: string }
 > = {
-  hard_skill: { icon: Zap, color: '#6366f1', label: 'Hard Skill' },
-  soft_skill: { icon: Star, color: '#f59e0b', label: 'Soft Skill' },
-  formatting: { icon: BookOpen, color: '#22c55e', label: 'Формат' },
-  certification: { icon: Award, color: '#8b5cf6', label: 'Сертификат' },
+  skill_gap: { icon: Zap, color: '#2563eb', label: 'Навык' },
+  experience_detail: { icon: Briefcase, color: '#16a34a', label: 'Опыт' },
+  resume_clarity: { icon: BookOpen, color: '#7c3aed', label: 'Резюме' },
+  salary_expectation: { icon: Target, color: '#ea580c', label: 'Ожидания' },
 };
 
 export default function RecommendationCard({ rec, index }: RecommendationCardProps) {
-  const config = categoryConfig[rec.category] || categoryConfig.hard_skill;
+  const config = typeConfig[rec.type] || typeConfig.resume_clarity;
   const Icon = config.icon;
 
   return (
@@ -44,8 +44,7 @@ export default function RecommendationCard({ rec, index }: RecommendationCardPro
         y: -2,
       }}
     >
-      {/* Top row: category + priority + impact */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div
             style={{
@@ -56,6 +55,7 @@ export default function RecommendationCard({ rec, index }: RecommendationCardPro
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <Icon size={16} color={config.color} />
@@ -63,33 +63,30 @@ export default function RecommendationCard({ rec, index }: RecommendationCardPro
           <span
             style={{
               fontSize: '0.75rem',
-              fontWeight: 600,
+              fontWeight: 700,
               color: config.color,
               textTransform: 'uppercase',
-              letterSpacing: '0.04em',
             }}
           >
             {config.label}
           </span>
         </div>
 
-        {rec.impact && (
-          <span
-            style={{
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-full)',
-              background: 'var(--success-light)',
-              color: 'var(--success)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-            }}
-          >
-            {rec.impact}
-          </span>
-        )}
+        <span
+          style={{
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-secondary)',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          #{rec.priority}
+        </span>
       </div>
 
-      {/* Title */}
       <h4
         style={{
           fontWeight: 700,
@@ -101,7 +98,6 @@ export default function RecommendationCard({ rec, index }: RecommendationCardPro
         {rec.title}
       </h4>
 
-      {/* Description */}
       <p
         style={{
           fontSize: '0.9rem',
@@ -109,11 +105,10 @@ export default function RecommendationCard({ rec, index }: RecommendationCardPro
           lineHeight: 1.6,
         }}
       >
-        {rec.description}
+        {rec.resume_change}
       </p>
 
-      {/* Action */}
-      {rec.action && (
+      {rec.expected_salary_effect && (
         <div
           style={{
             padding: '10px 14px',
@@ -121,11 +116,11 @@ export default function RecommendationCard({ rec, index }: RecommendationCardPro
             background: 'var(--accent-light)',
             fontSize: '0.85rem',
             color: 'var(--accent-primary)',
-            fontWeight: 500,
+            fontWeight: 600,
             lineHeight: 1.5,
           }}
         >
-          💡 {rec.action}
+          Ожидаемый эффект: {rec.expected_salary_effect}
         </div>
       )}
     </motion.div>

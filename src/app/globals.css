@@ -267,6 +267,13 @@ body {
   border-color: var(--success);
 }
 
+.stepper-circle.error {
+  background: var(--error-light);
+  color: var(--error);
+  border-color: var(--error);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
 .stepper-label {
   font-size: 0.85rem;
   font-weight: 500;
@@ -277,6 +284,11 @@ body {
 .stepper-label.active {
   color: var(--text-primary);
   font-weight: 600;
+}
+
+.stepper-label.error {
+  color: var(--error);
+  font-weight: 700;
 }
 
 .stepper-line {

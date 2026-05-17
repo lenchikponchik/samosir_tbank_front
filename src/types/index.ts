@@ -1,9 +1,4 @@
-/* ============================================================
-   TypeScript types — exact mirror of backend Pydantic schemas
-   (source: github.com/lenchikponchik/Samosir_tbank)
-   ============================================================ */
-
-// ─── Resume ────────────────────────────────────────────────
+/* TypeScript mirrors of the FastAPI Pydantic contracts. */
 
 export interface ExperienceEntry {
   company: string;
@@ -12,12 +7,14 @@ export interface ExperienceEntry {
   description: string;
 }
 
+export type EducationLevel = 'none' | 'bachelor' | 'master' | 'phd';
+
 export interface ResumeCreate {
   job_title: string;
   experience_years: number;
   skills: string[];
   location: string;
-  education_level: 'none' | 'bachelor' | 'master' | 'phd';
+  education_level: EducationLevel;
   experience_entries: ExperienceEntry[];
 }
 
@@ -26,7 +23,7 @@ export interface ResumeUpdate {
   experience_years?: number;
   skills?: string[];
   location?: string;
-  education_level?: 'none' | 'bachelor' | 'master' | 'phd';
+  education_level?: EducationLevel;
   experience_entries?: ExperienceEntry[];
 }
 
@@ -43,76 +40,108 @@ export interface ResumeResponse {
   created_at: string;
 }
 
-// ─── Estimate ──────────────────────────────────────────────
+export interface ResumeProfile {
+  title: string;
+  experience_years: number;
+  location: string;
+  skills: string[];
+  resume_text: string;
+  current_salary?: number | null;
+}
+
+export interface AnalyzeOptions {
+  target_salary?: number | null;
+  force_refresh: boolean;
+}
+
+export interface AnalyzeRequest {
+  profile: ResumeProfile;
+  options: AnalyzeOptions;
+}
+
+export interface SegmentOut {
+  segment_key: string;
+  segment_data_version: string;
+}
+
+export interface SalaryQuantiles {
+  p25: number;
+  p50: number;
+  p75: number;
+}
+
+export interface ExcludedVacancy {
+  id: string;
+  reason: string;
+}
+
+export interface MarketSample {
+  candidate_vacancies_received: number;
+  vacancies_used_for_estimation: number;
+  used_vacancy_ids: string[];
+  excluded_vacancies: ExcludedVacancy[];
+  salary_quantiles: SalaryQuantiles;
+}
 
 export interface SalaryRange {
-  p25: number;
-  p50: number;
-  p75: number;
+  min: number;
+  median: number;
+  max: number;
+  currency: 'RUB';
 }
 
-export interface MarketInsights {
-  vacancies_analyzed: number;
-  skill_match_percentage: number;
-  top_missing_skills: string[];
-  demand_trend: string;
+export interface Confidence {
+  score: number;
+  level: 'low' | 'medium' | 'high';
+  reason: string;
 }
 
-export interface ShapContribution {
-  feature: string;
-  contribution_rub: number;
+export interface MissingSkill {
+  skill: string;
+  impact: 'low' | 'medium' | 'high';
+  reason: string;
 }
 
-export interface EstimateRequest {
-  job_title: string;
-  experience_years: number;
-  skills: string[];
-  location: string;
-  education_level: string;
-  experience_entries: Record<string, unknown>[];
+export interface Factor {
+  factor: string;
+  impact: 'positive' | 'negative' | 'neutral';
+  explanation: string;
 }
 
-export interface EstimateResponse {
-  id: string;
-  resume_id: string;
-  salary_range: SalaryRange;
-  market_insights: MarketInsights;
-  shap_contributions: ShapContribution[];
-  recommendations: RecommendationResponse[];
-  calculated_at: string;
-}
+export type RecommendationType =
+  | 'skill_gap'
+  | 'experience_detail'
+  | 'resume_clarity'
+  | 'salary_expectation';
 
-// ─── Recommendation ────────────────────────────────────────
-
-export type RecommendationCategory =
-  | 'hard_skill'
-  | 'soft_skill'
-  | 'formatting'
-  | 'certification';
-
-export interface RecommendationResponse {
-  id: string;
+export interface AnalyzeRecommendation {
   priority: number;
-  category: RecommendationCategory;
+  type: RecommendationType;
   title: string;
-  description: string;
-  impact: string;
-  action: string;
+  resume_change: string;
+  expected_salary_effect?: string | null;
 }
 
-// ─── History ───────────────────────────────────────────────
-
-export interface EstimateHistoryItem {
-  estimate_id: string;
-  p25: number;
-  p50: number;
-  p75: number;
-  skills_snapshot: string[];
-  changed_fields: string[];
-  calculated_at: string;
+export interface GptOssSalaryResult {
+  request_hash: string;
+  segment: SegmentOut;
+  market_sample: MarketSample;
+  salary_range: SalaryRange;
+  confidence: Confidence;
+  matched_skills: string[];
+  missing_skills: MissingSkill[];
+  factor_analysis: Factor[];
+  recommendations: AnalyzeRecommendation[];
 }
 
-// ─── Wizard form state ─────────────────────────────────────
+export interface AnalyzeResponse {
+  status: 'success' | 'error';
+  source?: 'gpt-oss-20b' | 'cache' | null;
+  data?: GptOssSalaryResult | null;
+  code?: string | null;
+  message?: string | null;
+  validation_errors?: string[] | null;
+}
 
 export interface WizardFormData {
   job_title: string;
@@ -120,5 +149,9 @@ export interface WizardFormData {
   experience_years: number;
   experience_entries: ExperienceEntry[];
   skills: string[];
-  education_level: 'none' | 'bachelor' | 'master' | 'phd';
+  education_level: EducationLevel;
+  resume_text: string;
+  current_salary: number | null;
+  target_salary: number | null;
+  force_refresh: boolean;
 }

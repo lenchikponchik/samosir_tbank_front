@@ -5,26 +5,32 @@ import { Check } from 'lucide-react';
 interface WizardStepperProps {
   currentStep: number;
   steps: string[];
+  invalidSteps?: number[];
 }
 
-export default function WizardStepper({ currentStep, steps }: WizardStepperProps) {
+export default function WizardStepper({
+  currentStep,
+  steps,
+  invalidSteps = [],
+}: WizardStepperProps) {
   return (
     <div className="stepper">
       {steps.map((label, i) => {
         const stepNum = i + 1;
         const isActive = stepNum === currentStep;
         const isCompleted = stepNum < currentStep;
+        const hasError = invalidSteps.includes(stepNum);
 
         return (
           <div key={label} style={{ display: 'contents' }}>
             <div className="stepper-step" style={{ flex: 'none' }}>
               <div
-                className={`stepper-circle ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                className={`stepper-circle ${isActive ? 'active' : ''} ${isCompleted && !hasError ? 'completed' : ''} ${hasError ? 'error' : ''}`}
               >
-                {isCompleted ? <Check size={18} /> : stepNum}
+                {isCompleted && !hasError ? <Check size={18} /> : stepNum}
               </div>
               <span
-                className={`stepper-label ${isActive ? 'active' : ''}`}
+                className={`stepper-label ${isActive ? 'active' : ''} ${hasError ? 'error' : ''}`}
                 style={{ whiteSpace: 'nowrap' }}
               >
                 {label}
